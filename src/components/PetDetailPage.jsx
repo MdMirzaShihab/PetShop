@@ -118,8 +118,16 @@ function PetDetailPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {/* Left Column - Image */}
-            <div className="bg-gradient-to-br from-primary-200 to-primary-100 rounded-2xl flex items-center justify-center p-12 lg:p-16">
-              <div className="text-9xl lg:text-[12rem]">{pet.imagePlaceholder}</div>
+            <div className="aspect-square bg-gradient-to-br from-primary-200 to-primary-100 rounded-2xl flex items-center justify-center p-8">
+              {pet.image ? (
+                <img
+                  src={pet.image}
+                  alt={pet.name}
+                  className="w-full h-full object-contain"
+                />
+              ) : (
+                <div className="text-9xl lg:text-[12rem]">{pet.imagePlaceholder}</div>
+              )}
             </div>
 
             {/* Right Column - Details */}
@@ -245,8 +253,16 @@ function PetDetailPage() {
                   to={`/pets/${category}/${similarPet.id}`}
                   className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300"
                 >
-                  <div className="h-48 bg-gradient-to-br from-primary-200 to-primary-100 flex items-center justify-center text-7xl">
-                    {similarPet.imagePlaceholder}
+                  <div className="aspect-square bg-gradient-to-br from-primary-200 to-primary-100 flex items-center justify-center p-4">
+                    {similarPet.image ? (
+                      <img
+                        src={similarPet.image}
+                        alt={similarPet.name}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <div className="text-7xl">{similarPet.imagePlaceholder}</div>
+                    )}
                   </div>
                   <div className="p-5">
                     <h3 className="text-xl font-bold text-gray-900 mb-1">{similarPet.name}</h3>

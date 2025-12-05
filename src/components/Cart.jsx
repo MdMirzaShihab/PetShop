@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { discountCoupons } from '../data/mockData';
 import { useState } from 'react';
 
 function Cart() {
@@ -14,6 +15,13 @@ function Cart() {
     removeCoupon,
     hasPetsInCart,
     parsePrice,
+    // Discount coupon system
+    appliedDiscountCoupon,
+    discountAmount,
+    getDiscountableTotal,
+    getFinalTotal,
+    getProductTotal,
+    getPetTotal,
   } = useCart();
 
   const [couponInput, setCouponInput] = useState('');
@@ -22,7 +30,8 @@ function Cart() {
   const handleApplyCoupon = () => {
     const result = applyCoupon(couponInput.trim().toUpperCase());
     if (result.success) {
-      setCouponMessage('✓ Coupon applied! Pet adoption fees revealed.');
+      setCouponMessage(`✓ ${result.message || 'Coupon applied!'}`);
+      setCouponInput(''); // Clear input on success
       setTimeout(() => setCouponMessage(''), 3000);
     } else {
       setCouponMessage(result.error);
@@ -188,77 +197,136 @@ function Cart() {
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Order Summary</h2>
 
               <div className="space-y-3 mb-6">
-                <div className="flex justify-between text-gray-700">
+                {/* Products Subtotal (if products exist) */}
+                {getProductTotal() > 0 && (
+                  <div className="flex justify-between text-gray-700">
+                    <span>Products</span>
+                    <span className="font-semibold">৳{getProductTotal().toLocaleString('en-BD')}</span>
+                  </div>
+                )}
+
+                {/* Pets Subtotal (shown only if reveal code applied) */}
+                {hasPetsInCart() && appliedCoupon && (
+                  <div className="flex justify-between text-gray-700">
+                    <span>Adoption Fees</span>
+                    <span className="font-semibold">৳{getPetTotal().toLocaleString('en-BD')}</span>
+                  </div>
+                )}
+
+                {/* Pets Warning (shown if pets exist but no reveal code) */}
+                {hasPetsInCart() && !appliedCoupon && (
+                  <div className="flex justify-between text-amber-700">
+                    <span className="text-sm">Pets (requires coupon)</span>
+                    <span className="font-semibold italic text-sm">Pending</span>
+                  </div>
+                )}
+
+                {/* Subtotal Line */}
+                <div className="flex justify-between font-semibold text-gray-900 border-t pt-2">
                   <span>Subtotal</span>
-                  <span className="font-semibold">৳{getCartTotal().toLocaleString('en-BD')}</span>
+                  <span>৳{getDiscountableTotal().toLocaleString('en-BD')}</span>
                 </div>
+
+                {/* Discount (if applied) */}
+                {appliedDiscountCoupon && discountAmount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Discount ({appliedDiscountCoupon})</span>
+                    <span>-৳{discountAmount.toLocaleString('en-BD')}</span>
+                  </div>
+                )}
+
+                {/* Discount applies to products only warning */}
+                {appliedDiscountCoupon && hasPetsInCart() && !appliedCoupon && (
+                  <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                    ⓘ Discount applies to products only. Add price reveal code to include pets.
+                  </div>
+                )}
+
                 <div className="flex justify-between text-gray-700">
                   <span>Shipping</span>
                   <span className="font-semibold">৳100</span>
                 </div>
                 <div className="flex justify-between text-gray-700">
                   <span>Tax (10%)</span>
-                  <span className="font-semibold">৳{(getCartTotal() * 0.1).toLocaleString('en-BD')}</span>
+                  <span className="font-semibold">৳{Math.round(getFinalTotal() * 0.1).toLocaleString('en-BD')}</span>
                 </div>
                 <div className="border-t border-gray-300 pt-3">
                   <div className="flex justify-between text-gray-900">
                     <span className="text-lg font-bold">Total</span>
                     <span className="text-2xl font-bold text-primary-600">
-                      ৳{(getCartTotal() + 100 + getCartTotal() * 0.1).toLocaleString('en-BD')}
+                      ৳{(getFinalTotal() + 100 + Math.round(getFinalTotal() * 0.1)).toLocaleString('en-BD')}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Coupon Section - Only show if pets in cart */}
-              {hasPetsInCart() && (
-                <div className="border-t border-gray-300 pt-4 mt-4 mb-6">
-                  {!appliedCoupon ? (
-                    <>
-                      <label className="text-sm font-semibold text-gray-700 mb-2 block">
-                        Pet Adoption Coupon Code
-                      </label>
-                      <div className="flex gap-2 mb-2">
-                        <input
-                          type="text"
-                          value={couponInput}
-                          onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                          placeholder="PETADOPT2024"
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
-                        />
-                        <button
-                          onClick={handleApplyCoupon}
-                          className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-colors"
-                        >
-                          Apply
-                        </button>
-                      </div>
-                      {couponMessage && (
-                        <p className={`text-sm mb-2 ${couponMessage.includes('✓') ? 'text-green-600' : 'text-red-600'}`}>
-                          {couponMessage}
-                        </p>
-                      )}
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                        <p className="text-xs text-amber-800">
-                          ⚠️ Pet adoptions require a valid coupon code to proceed with checkout
-                        </p>
-                      </div>
-                    </>
-                  ) : (
+              {/* Coupon Section */}
+              <div className="border-t border-gray-300 pt-4 mt-4 mb-6">
+                <label className="text-sm font-semibold text-gray-700 mb-2 block">
+                  Coupon Code
+                </label>
+                <div className="flex gap-2 mb-3">
+                  <input
+                    type="text"
+                    value={couponInput}
+                    onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                    placeholder="Enter coupon code"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+                  />
+                  <button
+                    onClick={handleApplyCoupon}
+                    className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Apply
+                  </button>
+                </div>
+
+                {couponMessage && (
+                  <p className={`text-sm mb-3 ${couponMessage.includes('✓') ? 'text-green-600' : 'text-red-600'}`}>
+                    {couponMessage}
+                  </p>
+                )}
+
+                {/* Applied Coupons Display */}
+                <div className="space-y-2 mb-3">
+                  {appliedCoupon && (
                     <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center justify-between">
                       <span className="text-sm text-green-700 font-semibold">
-                        ✓ Coupon Applied: {appliedCoupon}
+                        ✓ {appliedCoupon} - Prices revealed
                       </span>
                       <button
-                        onClick={removeCoupon}
+                        onClick={() => removeCoupon('price')}
                         className="text-red-600 hover:text-red-700 text-sm font-semibold"
                       >
-                        Remove
+                        ×
+                      </button>
+                    </div>
+                  )}
+
+                  {appliedDiscountCoupon && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center justify-between">
+                      <span className="text-sm text-green-700 font-semibold">
+                        ✓ {appliedDiscountCoupon} - {discountCoupons[appliedDiscountCoupon].description}
+                      </span>
+                      <button
+                        onClick={() => removeCoupon('discount')}
+                        className="text-red-600 hover:text-red-700 text-sm font-semibold"
+                      >
+                        ×
                       </button>
                     </div>
                   )}
                 </div>
-              )}
+
+                {/* Warning if pets in cart but no reveal code */}
+                {hasPetsInCart() && !appliedCoupon && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <p className="text-xs text-amber-800">
+                      ⚠️ Pet adoptions require a valid coupon code to proceed with checkout
+                    </p>
+                  </div>
+                )}
+              </div>
 
               <button
                 onClick={() => navigate('/checkout')}

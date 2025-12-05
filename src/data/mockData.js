@@ -14,6 +14,12 @@ import catLitterImg from '../assets/PetProducts/CatLitter.avif';
 import reptFoodImg from '../assets/PetProducts/ReptFood.webp';
 import smallAnimalTreatsImg from '../assets/PetProducts/SmallAnimalTreats.webp';
 
+// Import dog breed images
+import goldenRetrieverImg from '../assets/Dogs/GoldenRetriever.jpg';
+import labradorImg from '../assets/Dogs/Labrador.jpg';
+import germanShepherdImg from '../assets/Dogs/GermanShepherd.jpg';
+import sheepadoodleImg from '../assets/Dogs/Sheepadoodle.jpg';
+
 // ============ PET CATEGORIES ============
 export const petCategories = [
   {
@@ -95,6 +101,43 @@ export const couponConfig = {
   validCoupon: 'PETADOPT2024',
   description: 'Pet adoption coupon for Bangladesh - 2024'
 };
+
+// ============ DISCOUNT COUPON CONFIGURATION ============
+export const discountCoupons = {
+  'SAVE10': {
+    code: 'SAVE10',
+    type: 'percentage',
+    value: 10,
+    description: '10% off entire order',
+    minOrderValue: 0,
+    appliesTo: 'all'
+  },
+  'FIRSTPET': {
+    code: 'FIRSTPET',
+    type: 'percentage',
+    value: 15,
+    description: '15% off for first-time pet adopters',
+    minOrderValue: 0,
+    appliesTo: 'pets'
+  },
+  'FLAT500': {
+    code: 'FLAT500',
+    type: 'fixed',
+    value: 500,
+    description: '৳500 off on orders above ৳10,000',
+    minOrderValue: 10000,
+    appliesTo: 'all'
+  },
+  'BUNDLE20': {
+    code: 'BUNDLE20',
+    type: 'percentage',
+    value: 20,
+    description: '20% off when adopting 2+ pets',
+    minOrderValue: 0,
+    appliesTo: 'pets'
+  }
+};
+
 // ============ AVAILABLE PETS FOR ADOPTION ============
 export const availablePets = {
   Dogs: [
@@ -113,7 +156,7 @@ export const availablePets = {
       personality: ['Playful', 'Loyal', 'Gentle'],
       vaccinated: true,
       trained: true,
-      imagePlaceholder: '🐕',
+      image: goldenRetrieverImg,
       type: 'animal'
     },
     {
@@ -131,7 +174,7 @@ export const availablePets = {
       personality: ['Friendly', 'Active', 'Smart'],
       vaccinated: true,
       trained: false,
-      imagePlaceholder: '🦮',
+      image: labradorImg,
       type: 'animal'
     },
     {
@@ -149,7 +192,7 @@ export const availablePets = {
       personality: ['Brave', 'Confident', 'Loyal'],
       vaccinated: true,
       trained: true,
-      imagePlaceholder: '🐕‍🦺',
+      image: germanShepherdImg,
       type: 'animal'
     },
     {
@@ -167,7 +210,7 @@ export const availablePets = {
       personality: ['Friendly', 'Smart', 'Affectionate'],
       vaccinated: true,
       trained: true,
-      imagePlaceholder: '🐕',
+      image: sheepadoodleImg,
       type: 'animal'
     }
   ],

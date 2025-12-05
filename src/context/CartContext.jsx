@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { couponConfig, discountCoupons } from '../data/mockData';
 
 const CartContext = createContext();
 
@@ -23,11 +24,18 @@ export const CartProvider = ({ children }) => {
   });
   const [couponError, setCouponError] = useState('');
 
+  const [appliedDiscountCoupon, setAppliedDiscountCoupon] = useState(() => {
+    const savedDiscountCoupon = localStorage.getItem('petStoreDiscountCoupon');
+    return savedDiscountCoupon || null;
+  });
+  const [discountAmount, setDiscountAmount] = useState(0);
+
   // Save cart to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('petStoreCart', JSON.stringify(cartItems));
     localStorage.setItem('petStoreCoupon', appliedCoupon || '');
-  }, [cartItems, appliedCoupon]);
+    localStorage.setItem('petStoreDiscountCoupon', appliedDiscountCoupon || '');
+  }, [cartItems, appliedCoupon, appliedDiscountCoupon]);
 
   // One-time migration to detect and clear corrupted cart data
   useEffect(() => {
@@ -155,6 +163,68 @@ export const CartProvider = ({ children }) => {
       }, 0);
   };
 
+  // Calculate discount based on coupon type and cart state
+  const calculateDiscount = (couponCode) => {
+    const coupon = discountCoupons[couponCode];
+    if (!coupon) return 0;
+
+    // Determine what the discount applies to based on cart state
+    let discountBase = 0;
+
+    if (hasPetsInCart()) {
+      if (appliedCoupon) {
+        // Reveal code applied → discount applies to ENTIRE ORDER
+        discountBase = getCartTotal(); // pets + products
+      } else {
+        // No reveal code → discount applies to PRODUCTS ONLY
+        discountBase = getProductTotal();
+      }
+    } else {
+      // No pets in cart → discount applies to all products
+      discountBase = getCartTotal();
+    }
+
+    // Check minimum order value against the discount base
+    if (discountBase < coupon.minOrderValue) return 0;
+
+    // Check conditions for pet-specific coupons (e.g., BUNDLE20 needs 2+ pets AND reveal code)
+    if (coupon.appliesTo === 'pets') {
+      const petCount = cartItems.filter(i => i.type === 'animal').length;
+      if (petCount < 2) return 0; // BUNDLE20 needs 2+ pets
+      if (!appliedCoupon) return 0; // Need reveal code for pet discounts
+    }
+
+    // Calculate discount amount
+    if (coupon.type === 'percentage') {
+      return Math.round((discountBase * coupon.value) / 100);
+    } else if (coupon.type === 'fixed') {
+      return Math.min(coupon.value, discountBase);
+    }
+
+    return 0;
+  };
+
+  // Get subtotal (what discount applies to)
+  const getDiscountableTotal = () => {
+    if (hasPetsInCart() && appliedCoupon) {
+      // Both pets and reveal code → entire order
+      return getCartTotal();
+    } else if (hasPetsInCart() && !appliedCoupon) {
+      // Pets but no reveal → products only
+      return getProductTotal();
+    } else {
+      // No pets → all products
+      return getCartTotal();
+    }
+  };
+
+  // Get final total with discount
+  const getFinalTotal = () => {
+    const discountableAmount = getDiscountableTotal();
+    const discount = appliedDiscountCoupon ? calculateDiscount(appliedDiscountCoupon) : 0;
+    return Math.max(0, discountableAmount - discount);
+  };
+
   const applyCoupon = (code) => {
     const trimmedCode = code.trim().toUpperCase();
 
@@ -163,23 +233,89 @@ export const CartProvider = ({ children }) => {
       return { success: false, error: 'Please enter a coupon code' };
     }
 
-    if (trimmedCode !== 'PETADOPT2024') {
-      setCouponError('Invalid coupon code');
-      return { success: false, error: 'Invalid coupon code' };
+    // Check if it's the price reveal coupon
+    if (trimmedCode === couponConfig.validCoupon) {
+      if (!hasPetsInCart()) {
+        setCouponError('Coupon only applies to pet adoptions');
+        return { success: false, error: 'This coupon only applies to pet adoptions' };
+      }
+      setAppliedCoupon(trimmedCode);
+      setCouponError('');
+
+      // IMPORTANT: Recalculate discount if one is already applied
+      // because discount base changes when reveal code is applied
+      if (appliedDiscountCoupon) {
+        const newDiscount = calculateDiscount(appliedDiscountCoupon);
+        setDiscountAmount(newDiscount);
+      }
+
+      return { success: true, message: 'Pet prices revealed!' };
     }
 
-    if (!hasPetsInCart()) {
-      setCouponError('Coupon only applies to pet adoptions');
-      return { success: false, error: 'This coupon only applies to pet adoptions' };
+    // Check if it's a discount coupon
+    if (discountCoupons[trimmedCode]) {
+      const coupon = discountCoupons[trimmedCode];
+
+      // Calculate the base amount for validation
+      const discountBase = hasPetsInCart() && appliedCoupon
+        ? getCartTotal()
+        : hasPetsInCart()
+          ? getProductTotal()
+          : getCartTotal();
+
+      // Validate minimum order value
+      if (discountBase < coupon.minOrderValue) {
+        setCouponError(`Minimum order value of ৳${coupon.minOrderValue.toLocaleString('en-BD')} required`);
+        return {
+          success: false,
+          error: `Minimum order value of ৳${coupon.minOrderValue.toLocaleString('en-BD')} required`
+        };
+      }
+
+      // Special validation for pet-specific coupons
+      if (coupon.appliesTo === 'pets' && hasPetsInCart() && !appliedCoupon) {
+        setCouponError('Please apply price reveal code first for pet discounts');
+        return {
+          success: false,
+          error: 'Please apply price reveal code first for pet discounts'
+        };
+      }
+
+      // Apply discount
+      setAppliedDiscountCoupon(trimmedCode);
+      const discount = calculateDiscount(trimmedCode);
+      setDiscountAmount(discount);
+      setCouponError('');
+
+      // Info message varies based on cart state
+      let message = coupon.description;
+      if (hasPetsInCart() && !appliedCoupon) {
+        message += ' (applies to products only)';
+      }
+
+      return {
+        success: true,
+        message: message
+      };
     }
 
-    setAppliedCoupon(trimmedCode);
-    setCouponError('');
-    return { success: true };
+    setCouponError('Invalid coupon code');
+    return { success: false, error: 'Invalid coupon code' };
   };
 
-  const removeCoupon = () => {
-    setAppliedCoupon(null);
+  const removeCoupon = (type = 'price') => {
+    if (type === 'price') {
+      setAppliedCoupon(null);
+
+      // Recalculate discount to apply to products only now
+      if (appliedDiscountCoupon && hasPetsInCart()) {
+        const newDiscount = calculateDiscount(appliedDiscountCoupon);
+        setDiscountAmount(newDiscount);
+      }
+    } else if (type === 'discount') {
+      setAppliedDiscountCoupon(null);
+      setDiscountAmount(0);
+    }
     setCouponError('');
   };
 
@@ -197,11 +333,18 @@ export const CartProvider = ({ children }) => {
     clearCart,
     getCartTotal,
     getCartCount,
-    // New additions for coupon system
+    // Price reveal coupon system
     appliedCoupon,
     applyCoupon,
     removeCoupon,
     couponError,
+    // Discount coupon system
+    appliedDiscountCoupon,
+    discountAmount,
+    calculateDiscount,
+    getDiscountableTotal,
+    getFinalTotal,
+    // Helper functions
     hasPetsInCart,
     hasProductsInCart,
     getPetTotal,

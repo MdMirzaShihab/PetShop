@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { discountCoupons } from '../data/mockData';
 
 function Checkout() {
   const navigate = useNavigate();
@@ -16,6 +17,11 @@ function Checkout() {
     removePetsFromCart,
     getPetTotal,
     getProductTotal,
+    // Discount coupon system
+    appliedDiscountCoupon,
+    discountAmount,
+    getDiscountableTotal,
+    getFinalTotal,
   } = useCart();
 
   const [isProcessing, setIsProcessing] = useState(false);
@@ -89,10 +95,16 @@ function Checkout() {
     return null;
   }
 
-  const subtotal = getCartTotal();
+  const subtotal = getDiscountableTotal();
   const shipping = 100;
-  const tax = subtotal * 0.1;
-  const total = subtotal + shipping + tax;
+  const finalSubtotal = getFinalTotal(); // After discount
+  const tax = Math.round(finalSubtotal * 0.1);
+  const total = finalSubtotal + shipping + tax;
+
+  // Filter out pets if no coupon is applied
+  const checkoutItems = appliedCoupon
+    ? cartItems
+    : cartItems.filter(item => item.type !== 'animal');
 
   if (orderComplete) {
     return (
@@ -354,9 +366,18 @@ function Checkout() {
               <div className="bg-background-secondary rounded-lg p-6 sticky top-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">Order Summary</h2>
 
+                {/* Exclusion Message for Hidden Pets */}
+                {hasPetsInCart() && !appliedCoupon && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-blue-800">
+                      ℹ️ {cartItems.filter(item => item.type === 'animal').length} pet(s) excluded from checkout. Apply a valid coupon code below to include pet adoptions.
+                    </p>
+                  </div>
+                )}
+
                 {/* Cart Items */}
                 <div className="space-y-4 mb-6 max-h-64 overflow-y-auto">
-                  {cartItems.map((item) => (
+                  {checkoutItems.map((item) => (
                     <div key={item.id} className="flex gap-3">
                       <div className="w-16 h-16 bg-white rounded flex items-center justify-center flex-shrink-0">
                         {item.image ? (
@@ -376,67 +397,92 @@ function Checkout() {
                       <div className="flex-1">
                         <h4 className="font-semibold text-gray-900 text-sm">{item.name}</h4>
                         <p className="text-xs text-gray-600">Qty: {item.quantity}</p>
-                        <p className="text-sm font-bold text-primary-600">{item.price}</p>
+                        <p className="text-sm font-bold text-primary-600">
+                          {item.type === 'animal'
+                            ? `৳${(item.hiddenPrice * item.quantity).toLocaleString('en-BD')}`
+                            : item.price
+                          }
+                        </p>
                       </div>
                     </div>
                   ))}
                 </div>
 
                 {/* Coupon Section */}
-                {hasPetsInCart() && (
-                  <div className="border-t border-gray-300 pt-4 mt-4">
-                    {!appliedCoupon ? (
-                      <>
-                        <label className="text-sm font-semibold text-gray-900 mb-2 block">
-                          Pet Adoption Coupon Code
-                        </label>
-                        <div className="flex gap-2 mb-2">
-                          <input
-                            type="text"
-                            value={couponInput}
-                            onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                            placeholder="PETADOPT2024"
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const result = applyCoupon(couponInput.trim());
-                              setCouponMessage(result.success ? '✓ Coupon applied!' : result.error);
-                              setTimeout(() => setCouponMessage(''), 3000);
-                            }}
-                            className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm"
-                          >
-                            Apply
-                          </button>
-                        </div>
-                        {couponMessage && (
-                          <p className={`text-xs mb-2 ${couponMessage.includes('✓') ? 'text-green-600' : 'text-red-600'}`}>
-                            {couponMessage}
-                          </p>
-                        )}
-                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-                          <p className="text-xs text-amber-800">
-                            ⚠️ Pet adoption requires a valid coupon code. Pets will be removed if you proceed without a coupon.
-                          </p>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center justify-between">
-                        <span className="text-sm text-green-700 font-semibold">
-                          ✓ Coupon: {appliedCoupon}
+                <div className="border-t border-gray-300 pt-4 mt-4">
+                  <label className="text-sm font-semibold text-gray-900 mb-2 block">
+                    Coupon Code
+                  </label>
+                  <div className="flex gap-2 mb-3">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                      placeholder="Enter coupon code"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-600"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const result = applyCoupon(couponInput.trim());
+                        setCouponMessage(result.success ? `✓ ${result.message || 'Coupon applied!'}` : result.error);
+                        if (result.success) setCouponInput('');
+                        setTimeout(() => setCouponMessage(''), 3000);
+                      }}
+                      className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg text-sm"
+                    >
+                      Apply
+                    </button>
+                  </div>
+
+                  {couponMessage && (
+                    <p className={`text-xs mb-3 ${couponMessage.includes('✓') ? 'text-green-600' : 'text-red-600'}`}>
+                      {couponMessage}
+                    </p>
+                  )}
+
+                  {/* Applied Coupons Display */}
+                  <div className="space-y-2 mb-3">
+                    {appliedCoupon && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-2 flex items-center justify-between">
+                        <span className="text-xs text-green-700 font-semibold">
+                          ✓ {appliedCoupon} - Prices revealed
                         </span>
                         <button
                           type="button"
-                          onClick={removeCoupon}
+                          onClick={() => removeCoupon('price')}
                           className="text-red-600 hover:text-red-700 text-xs font-semibold"
                         >
-                          Remove
+                          ×
+                        </button>
+                      </div>
+                    )}
+
+                    {appliedDiscountCoupon && (
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-2 flex items-center justify-between">
+                        <span className="text-xs text-green-700 font-semibold">
+                          ✓ {appliedDiscountCoupon} - {discountCoupons[appliedDiscountCoupon].description}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeCoupon('discount')}
+                          className="text-red-600 hover:text-red-700 text-xs font-semibold"
+                        >
+                          ×
                         </button>
                       </div>
                     )}
                   </div>
-                )}
+
+                  {/* Warning if pets in cart but no reveal code */}
+                  {hasPetsInCart() && !appliedCoupon && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                      <p className="text-xs text-amber-800">
+                        ⚠️ Pet adoption requires a valid coupon code. Pets will be removed if you proceed without a coupon.
+                      </p>
+                    </div>
+                  )}
+                </div>
 
                 {/* Price Breakdown */}
                 <div className="space-y-3 mb-6 pt-6 border-t border-gray-300">
@@ -458,6 +504,27 @@ function Checkout() {
                     <div className="flex justify-between text-amber-700">
                       <span className="text-sm">Pets (requires coupon)</span>
                       <span className="font-semibold italic text-sm">Pending</span>
+                    </div>
+                  )}
+
+                  {/* Subtotal Line */}
+                  <div className="flex justify-between font-semibold text-gray-900 border-t pt-2">
+                    <span>Subtotal</span>
+                    <span>৳{subtotal.toLocaleString('en-BD')}</span>
+                  </div>
+
+                  {/* Discount (if applied) */}
+                  {appliedDiscountCoupon && discountAmount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Discount ({appliedDiscountCoupon})</span>
+                      <span>-৳{discountAmount.toLocaleString('en-BD')}</span>
+                    </div>
+                  )}
+
+                  {/* Discount applies to products only warning */}
+                  {appliedDiscountCoupon && hasPetsInCart() && !appliedCoupon && (
+                    <div className="text-xs text-amber-600 bg-amber-50 p-2 rounded">
+                      ⓘ Discount applies to products only.
                     </div>
                   )}
 

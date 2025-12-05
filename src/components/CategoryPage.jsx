@@ -70,10 +70,18 @@ function CategoryPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {pets.map((pet) => (
               <div key={pet.id} className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300">
-                {/* Pet Image Placeholder */}
+                {/* Pet Image */}
                 <Link to={`/pets/${category}/${pet.id}`}>
-                  <div className="h-64 flex items-center justify-center text-9xl cursor-pointer hover:scale-105 transition-transform duration-300">
-                    {pet.imagePlaceholder}
+                  <div className="aspect-square flex items-center justify-center cursor-pointer hover:scale-105 transition-transform duration-300 bg-gradient-to-br from-primary-50 to-background-secondary">
+                    {pet.image ? (
+                      <img
+                        src={pet.image}
+                        alt={pet.name}
+                        className="w-full h-full object-contain"
+                      />
+                    ) : (
+                      <div className="text-9xl">{pet.imagePlaceholder}</div>
+                    )}
                   </div>
                 </Link>
 
