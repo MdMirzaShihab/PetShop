@@ -42,7 +42,6 @@ function CategoryPage() {
             />
           </div>
           <div className="text-center">
-            <div className="text-7xl mb-4">{categoryData.icon}</div>
             <h1 className="text-6xl font-bold mb-4 text-gray-900">{categoryData.name}</h1>
             <p className="text-2xl mb-6 text-gray-700">{categoryData.tagline}</p>
             {/* Breadcrumb */}
@@ -72,15 +71,17 @@ function CategoryPage() {
               <div key={pet.id} className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300">
                 {/* Pet Image */}
                 <Link to={`/pets/${category}/${pet.id}`}>
-                  <div className="aspect-square flex items-center justify-center cursor-pointer hover:scale-105 transition-transform duration-300 bg-gradient-to-br from-primary-50 to-background-secondary">
+                  <div className="aspect-square cursor-pointer hover:scale-105 transition-transform duration-300 overflow-hidden">
                     {pet.image ? (
                       <img
                         src={pet.image}
                         alt={pet.name}
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="text-9xl">{pet.imagePlaceholder}</div>
+                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary-50 to-background-secondary">
+                        <div className="text-9xl">{pet.imagePlaceholder}</div>
+                      </div>
                     )}
                   </div>
                 </Link>

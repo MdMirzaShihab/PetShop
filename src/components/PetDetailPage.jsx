@@ -118,15 +118,17 @@ function PetDetailPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             {/* Left Column - Image */}
-            <div className="aspect-square bg-gradient-to-br from-primary-200 to-primary-100 rounded-2xl flex items-center justify-center p-8">
+            <div className="aspect-square rounded-2xl overflow-hidden border-4 border-primary-300 shadow-xl bg-gradient-to-br from-primary-50 via-white to-primary-100">
               {pet.image ? (
                 <img
                   src={pet.image}
                   alt={pet.name}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="text-9xl lg:text-[12rem]">{pet.imagePlaceholder}</div>
+                <div className="w-full h-full flex items-center justify-center">
+                  <div className="text-9xl lg:text-[12rem]">{pet.imagePlaceholder}</div>
+                </div>
               )}
             </div>
 
@@ -251,20 +253,22 @@ function PetDetailPage() {
                 <Link
                   key={similarPet.id}
                   to={`/pets/${category}/${similarPet.id}`}
-                  className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300"
+                  className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border-4 border-primary-200 hover:border-primary-400"
                 >
-                  <div className="aspect-square bg-gradient-to-br from-primary-200 to-primary-100 flex items-center justify-center p-4">
+                  <div className="aspect-square overflow-hidden bg-gradient-to-br from-primary-50 via-white to-primary-100">
                     {similarPet.image ? (
                       <img
                         src={similarPet.image}
                         alt={similarPet.name}
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="text-7xl">{similarPet.imagePlaceholder}</div>
+                      <div className="w-full h-full flex items-center justify-center">
+                        <div className="text-7xl">{similarPet.imagePlaceholder}</div>
+                      </div>
                     )}
                   </div>
-                  <div className="p-5">
+                  <div className="p-5 bg-gradient-to-b from-primary-50 to-white">
                     <h3 className="text-xl font-bold text-gray-900 mb-1">{similarPet.name}</h3>
                     <p className="text-primary-600 font-semibold mb-2">{similarPet.breed}</p>
                     <div className="flex flex-wrap gap-2">
